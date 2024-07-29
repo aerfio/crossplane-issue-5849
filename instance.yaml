@@ -1,0 +1,7 @@
+apiVersion: aerf.io/v1alpha1
+kind: CrossplaneIssue
+metadata:
+  name: test
+  namespace: default
+spec:
+  compositeDeletePolicy: Foreground

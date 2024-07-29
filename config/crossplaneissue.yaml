@@ -1,0 +1,52 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: crossplaneissue
+spec:
+  compositeTypeRef:
+    apiVersion: aerf.io/v1alpha1
+    kind: XCrossplaneIssue
+  mode: Pipeline
+  pipeline:
+    - step: k8s_provider_config
+      functionRef:
+        name: crossplane-contrib-function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            ---
+            apiVersion: kubernetes.crossplane.io/v1alpha1
+            kind: ProviderConfig
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/ready: "True"
+                {{ setResourceNameAnnotation "k8s_provider_config" }}
+            spec:
+              credentials:
+                source: InjectedIdentity
+            ---
+            {{- with .observed.resources.k8s_provider_config.resource.metadata.name }}
+            apiVersion: kubernetes.crossplane.io/v1alpha2
+            kind: Object
+            metadata:
+              annotations:
+                {{ setResourceNameAnnotation "object" }}
+            spec:
+              forProvider:
+                manifest:
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    namespace: default
+                    name: something
+                  data:
+                    key: value
+              providerConfigRef:
+                name: {{ . }}
+            {{- end }}
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: crossplane-contrib-function-auto-ready
